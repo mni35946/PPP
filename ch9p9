@@ -1,0 +1,512 @@
+//this should be in a file called Chrono.h
+//*******************************************************
+#include"../std_lib_facilities.h"
+namespace Chrono{
+
+	class Date{
+
+	public:
+		enum Month{
+			jan=1,feb,mar,apr,may,jun,jul,aug,sep,oct,nov,dec
+		};
+
+		class Invalid{};//to throw exception
+
+		Date(int y, Month m, int d);
+		Date();//default constuctor
+
+		//nonmodifying operations:
+		int day() const { return d;}
+		Month month() const { return m;}
+		int year() const { return y; }
+
+		//modifying operations:
+		void add_day(int n);
+		void add_month(int n);
+		void add_year(int n);
+
+	private:
+		int y;
+		Month m;
+		int d;
+	};
+
+	bool is_date(int y, Date::Month m, int d);//true for valid date
+
+	bool leapyear(int y);//true if y is a leap year
+
+	bool operator==(const Date& a, const Date& b);
+	bool operator!=(const Date& a, const Date& b);
+
+	ostream& operator<<(ostream& os, const Date& d);
+
+	istream& operator>>(istream& is, Date& d);
+
+}
+
+//****************************************************************
+//this should be put in a file called CHrono.cpp
+#include "Chrono.h"
+
+namespace Chrono{
+
+	//member function definitions:
+	Date::Date(int yy, Month mm, int dd) :y(yy), m(mm), d(dd)
+	{
+		if (!is_date(yy, mm, dd))
+			throw Invalid();
+	}
+
+	Date& default_date()
+	{
+		static Date dd(2001, Date::jan, 1);
+		return dd;
+	}
+
+	Date::Date()
+		:y(default_date().year()),
+		m(default_date().month()),
+		d(default_date().day())
+	{}
+
+	/*void Date::add_day(int n)
+	{
+	int days_in_month = 31;
+	d += n;
+	do{
+	switch (m){
+	case Date::feb:
+	if (leapyear(y))
+	days_in_month = 29;
+	else
+	days_in_month = 28;
+	break;
+	case Date::apr:case Date::jun:case Date::sep:case Date::nov:
+	days_in_month = 30;
+	break;
+	}
+	if (days_in_month < d && m != dec)
+	{
+	m++; d -= days_in_month;
+	}
+	else if (days_in_month < d && m == dec)
+	{
+	m = jan;
+	y++;
+	d -= days_in_month;
+	}
+	else break;
+	} while (1);
+	}
+
+	void Date::add_month(int n)
+	{
+	m += n;
+	while (m > Date::dec)
+	{y++; m - dec;}
+	}
+	*/
+	void Date::add_year(int n)
+	{
+		if (m == feb && d == 29 && !leapyear(y + n))
+		{
+			m = mar;
+			d = 1;
+		}
+		y += n;
+	}
+
+
+
+
+	//helper functions:
+
+	bool is_date(int y, Date::Month m, int d)
+	{
+		//assume that y is valid
+
+		if (d <= 0) return false;
+		int days_in_month = 31;//most months have 31 days
+		if (m < Date::jan || m > Date::dec) return false;
+		switch (m)
+		{
+		case Date::feb://the length of February varies
+			days_in_month = (leapyear(y)) ? 29 : 28;
+			break;
+		case Date::apr:case Date::jun:case Date::sep:case Date::nov:
+			days_in_month = 30;
+			break;
+		}
+		if (days_in_month < d) return false;
+
+		return true;
+	}
+
+
+	bool leapyear(int y)
+	{
+		if (y % 4 == 0)
+			return true;
+		else
+			return false;
+	}
+
+	bool operator==(const Date& a,const Date& b)
+	{
+		return a.year() == b.year()
+			&& a.month() == b.month()
+			&& a.day() == b.day();
+	}
+
+	bool operator!=(const Date& a, const Date& b)
+	{
+		return !(a == b);
+	}
+
+	ostream& operator<< (ostream& os, const Date& a)
+	{
+		return os << '(' << a.year()
+			<< ',' << a.month()
+			<< ',' << a.day() << ')';
+	}
+	istream& operator>>(istream& is, Date& dd)
+	{
+		int y, m, d;
+		char ch1, ch2, ch3, ch4;
+		is >> ch1 >> y >> ch2 >> m >> ch3 >> d >> ch4;
+		if (!is) return is;
+		if (ch1 != '(' || ch2 != ',' || ch3 != ',' || ch4 != ')')
+		{
+			is.clear(ios_base::failbit);
+			return is;
+		}
+		return is;
+	}
+}
+
+//********************************************************
+
+//this should put in a file called main.cpp
+#include"../../std_lib_facilities.h"
+#include"../chrono.h"
+
+class Book{
+public:
+	enum Genre{fiction,nonfiction,periodical,Bioghaphy,children};
+	Book(string _isbn, string _title, string _author, Chrono::Date d,Genre _type, bool ico);
+	string get_isbn() const{ return isbn; }
+	string get_title()const{ return title; }
+	string get_author()const{ return author; }
+	Genre get_type()const{ return type; }
+	string print_type()const;
+	Chrono::Date get_date(void){ return copyright_date; }
+	bool book_available() const{ return is_available; }
+	void print_book() const;
+
+	bool check_out();//return true if we were able to check out the book.
+	bool check_in();//return false if we failed to check the book in (was it ever checked out?) 
+	class Invalid_input{};
+
+private:
+	string isbn;
+	string title;
+	string author;
+	Chrono::Date  copyright_date;
+	Genre type;
+	bool is_available;
+};
+string Book::print_type()const
+{
+	static string genre_name[5] = { "fiction", "nonfiction", "periodical", "Bioghaphy", "children" };
+	return genre_name[this->get_type()];
+}
+bool is_isbn(const string&);
+
+Book::Book(string _isbn, string _title, string _author, Chrono::Date d,Genre _type, bool a)
+:isbn(_isbn), title(_title), author(_author), copyright_date(d),type(_type) ,is_available(a)
+{
+	if (!is_isbn(_isbn)) throw Invalid_input();
+}
+bool Book::check_out()
+{
+	if (book_available()){
+		is_available = false;
+		return true;
+	}
+	return false;
+}
+
+
+bool Book::check_in()
+{
+	if (!book_available()){
+		is_available = true;
+		return true;
+	}
+	return false;
+}
+
+void Book::print_book() const
+{
+	cout << "The title is: " << get_title() << endl;
+	cout << "The author is:" << get_author() << endl;
+	cout << "The ISBN is: " << get_isbn() << endl;
+	cout << "The copyright date is: " << copyright_date << endl;
+	cout << "The type is: " << print_type()<<endl;
+	if (book_available())
+		cout << "the book is currently available" << endl;
+	else
+		cout << "the book is currently not available" << endl;
+}
+
+//helper function:
+bool is_isbn(const string& isbn)
+{
+	const char seperator = '-';
+	int seperator_count = 0;//if isbn is valid it should have three dashes.
+
+	//check last character first.
+	if (isalpha(isbn[isbn.size() - 1]) == false && isdigit(isbn[isbn.size() - 1] == false))
+		return false;
+
+	for (int i = 0; i < isbn.size() - 1; ++i){
+		char ch = isbn[i];
+		if (!isdigit(ch) && ch != seperator) return false;
+		if (ch == seperator) ++seperator_count;
+	}
+	if (seperator_count != 3)return false;
+	else return true;
+}
+
+void read_line(string& str)
+{
+	bool found_nl = false;
+	while (!found_nl){
+		char ch;
+		cin.get(ch);
+		if (isspace(ch) && ch == 10)//look out for a new line.in ASCII code,10 means line feed.
+			found_nl = true;
+		else
+			str += ch;
+	}
+
+}
+
+bool operator== (const Book& a,const Book& b)
+{
+	if (a.get_isbn() == b.get_isbn())
+		return true;
+	else
+		return false;
+}
+
+bool operator!=(const Book& a, const Book& b)
+{
+	return !(a == b);
+}
+ostream& operator<<(ostream& os, Book a)
+{
+	os << "<<多載..." << endl
+		<< "The title is: " << a.get_title() << endl
+		<< "The author is:" << a.get_author() << endl
+		<< "The ISBN is: " << a.get_isbn() << endl
+		<< "The copyright date is: " << a.get_date() << endl
+		<< "the genre is:"<< a.print_type()<<endl; 
+	if (a.book_available())
+		os << "the book is currently available" << endl;
+	else
+		os << "the book is currently not available" << endl;
+	return os;
+}
+
+
+class Patron{
+public:
+	Patron(string _user, string _id_number, int _overdraft=0);
+
+	string get_name()const{ return name; }
+	string get_id_number()const{ return id_number; }
+	int get_overdraft()const{ return overdraft; }
+	void set_overdraft(int a){ overdraft = a; }
+	bool is_owed(); 
+private:
+	string name;
+	string id_number;
+	int overdraft;
+};
+Patron::Patron(string _user, string _id_number, int _overdraft) 
+               :name(_user), id_number(_id_number), overdraft(_overdraft)
+{}
+
+bool Patron::is_owed(){
+	if (overdraft == 0)return false;
+	else return true;
+}
+
+struct Transaction{
+	Transaction(Book, Patron, Chrono::Date);
+	Book book_be_borrowed;
+	Patron borrower;
+	Chrono::Date time;
+};
+Transaction::Transaction(Book a, Patron b, Chrono::Date d) :book_be_borrowed(a), borrower(b), time(d)
+{}
+void print_transaction(Transaction& a)
+{
+	cout << "borrower: " << a.borrower.get_name() << endl;
+	cout << "book title: " << a.book_be_borrowed.get_title() << endl;
+	cout << "date: " << a.time << endl;
+}
+class library{
+public:
+	void add_book();
+	void add_user();
+	void borrow_book();
+
+	Book get_book(int i){ return books[i]; }
+	Patron get_patron(int i){ return users[i]; }
+	Patron find_Patron(string&);
+	Book find_book(string&);
+	Transaction get_transaction(int i){ return records[i]; }
+private:
+	vector<Book>books;
+	vector<Patron>users;
+	vector<Transaction>records;
+};
+
+void library::add_book()
+{
+	cout << "book registration:" << endl;
+	cout << "book title:";
+	string title;
+	read_line(title);
+
+	cout << "book author:";
+	string author;
+	read_line(author);
+
+	cout << "ISBN:";
+	string isbn;
+	cin>>isbn;
+
+	cout << "genre:(0)fiction(1)nonfiction(2)periodical(3)Bioghaphy(4)children:";
+	int genre;
+	cin >> genre;
+
+	cout << "copyright_date:";
+	int y,m,d;
+	cin >> y >> m >> d;
+
+	Chrono::Date date(y,Chrono::Date::Month(m),d);
+	Book new_book(isbn,title,author,date,Book::Genre(genre),true);
+	books.push_back(new_book);
+}
+void library::add_user(){
+	cout << "Patron registration: " << endl;
+	cout << "Patron's name: ";
+	string name;
+	read_line(name);
+
+	cout << "ID number: ";
+	string id_number;
+	read_line(id_number);
+
+	Patron new_user(name, id_number);
+	users.push_back(new_user);
+}
+void library::borrow_book(){
+	cout << "your ID number:";
+	string id;
+	read_line(id);
+	Patron borrower=find_Patron(id);
+	if (borrower.is_owed())error("owed fees.");
+	
+	cout << "which book would you like to borrow?";
+	string title;
+	read_line(title);
+	Book book_borrowed = find_book(title);
+	cout << "date: ";
+	int y, m, d;
+	cin >> y >> m >> d;
+	Chrono::Date date(y, Chrono::Date::Month(m), d);
+	if (!book_borrowed.book_available())
+	{
+		cout << "this book is borrowed by other patrons.";
+		return;
+	}
+	else
+	{
+		for (int i = 0; i<books.size(); i++)
+		if (title == get_book(i).get_title())
+			books[i].check_out();
+		Transaction record(book_borrowed, borrower, date);
+		records.push_back(record);
+	}
+
+}
+//helper function
+Patron library::find_Patron(string& id_number)
+{
+	for (int i = 0; i<users.size(); i++)
+	if (id_number == get_patron(i).get_id_number())
+		return get_patron(i);
+	error("can't find this id number");
+}
+Book library::find_book(string& title)
+{
+	for (int i = 0; i<books.size(); i++)
+	if (title == get_book(i).get_title())
+		return get_book(i);
+	error("can't find this book");
+}
+int main()
+try{
+	library nthu;
+	nthu.add_book();
+	cin.get();//吸收enter
+	nthu.add_book();
+	cin.get();
+	nthu.get_book(0).print_book();
+	nthu.get_book(1).print_book();
+	nthu.add_user();
+	nthu.add_user();
+	nthu.borrow_book();
+	nthu.get_book(0).print_book();
+	nthu.get_book(1).print_book();
+	print_transaction(nthu.get_transaction(0));
+
+
+keep_window_open();
+	return 0;
+	
+	
+}
+catch (runtime_error& e)
+{
+	cerr << e.what() << endl;
+	keep_window_open();
+	return  2;
+}
+
+catch (Chrono::Date::Invalid e)
+{
+	cerr << "invalid date entered" << endl;
+	keep_window_open();
+	return  2;
+}
+catch (Book::Invalid_input e)
+{
+	cerr << "invalid isbn entered" << endl;
+	keep_window_open();
+	return  3;
+}
+catch (...)
+{
+	cerr << "unknown errer occured..." << endl;
+	keep_window_open();
+	return 4;
+}
+
+
+
+
